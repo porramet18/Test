@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    resourceName: core
+    resourceType: core
+  name: sift-core
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: sift-core-pod
+  serviceName: sift-core
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::415139501148:role/opolo-prod-iam-stack-KubernetesClusterNodeRole-YAuLhb1hbe6P
+      labels:
+        app: sift-core-pod
+        resourceName: core
+        resourceType: core
+    spec:
+      containers:
+      - env:
+        - name: APP_LOG_LEVEL
+          value: WARN
+        - name: CACHE_SIZE
+          value: '100000'
+        - name: CONFIG_BUCKET
+          value: opolo_config_prod
+        - name: CONTAINER_ID
+          value: panda
+        - name: DEFAULT_BUCKET
+          value: opolo_default_prod
+        - name: DS_NAME
+          value: panda
+        - name: ELASTICSEARCH_SIFT_BADRECORDS_INDEX
+          value: siftbadrecords
+        - name: ELASTICSEARCH_SIFT_FILREPORT_INDEX
+          value: pandastats
+        - name: ELASTICSEARCH_SIFT_LOGS_INDEX
+          value: pandalogs
+        - name: ELASTICSEARCH_URL
+          value: http://elk-aws.uat.th.intranet:9200
+        - name: HEAP_SIZE
+          value: 100g
+        - name: JVM_PARAM
+          value: -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=20 -XX:GCLogFileSize=10M
+            -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCApplicationConcurrentTime
+            -verbose:gc -XX:+PrintGCDetails -Xloggc:/home/siftuser/gc.log -XX:MetaspaceSize=96m
+            -XX:+UseG1GC -XX:MaxGCPauseMillis=300 -XX:InitiatingHeapOccupancyPercent=40
+            -XX:G1HeapRegionSize=16M -XX:MinMetaspaceFreeRatio=50 -XX:MaxMetaspaceFreeRatio=80
+            -XX:ParallelGCThreads=10 -XX:ConcGCThreads=5
+        - name: LOG_LEVEL
+          value: ERROR
+        - name: LOG_TYPE
+          value: console
+        - name: MAX_POLL_RECORDS
+          value: '200'
+        - name: NAMESPACE
+          value: opolo
+        - name: PERSIST_ADDRESS
+          value: 10.193.41.180,10.193.42.134,10.193.43.147
+        - name: PERSIST_CLIENT
+          value: couchbasev7
+        - name: PERSIST_PASSWORD
+          value: H0tbr3@d
+        - name: PERSIST_SSL
+          value: /opt/knowesis/sift/core/ssl/opolo_production_cb_certs.pem
+        - name: PERSIST_USERNAME
+          value: opolopr
+        - name: SEEK_TO_BEGINNING
+          value: 'false'
+        - name: SLEEPTIME
+          value: '0'
+        - name: TZ
+          value: Australia/Sydney
+        image: harbor.tools.telstra.com/pers-cloud-opolo/opolo-new-arch:sift-core-V4.5.2-TelstraResilience
+        imagePullPolicy: Always
+        name: sift-core
+        resources:
+          limits:
+            cpu: '10'
+            memory: 150G
+          requests:
+            cpu: '1'
+            memory: 120G
+        volumeMounts:
+        - mountPath: /opt/knowesis/sift/core/ssl/opolo_production_cb_certs.pem
+          name: couchbase-pem-volume
+          subPath: opolo_production_cb_certs.pem
+        - mountPath: /usr/share/zoneinfo/Australia/Sydney
+          name: tz-config
+          subPath: Sydney
+        - mountPath: /opt/knowesis/sift/core/sift/pworkspace/SiFT_Source_data/impl/lib/Stardust-1.0.0.jar
+          name: stardust-jar
+          subPath: Stardust-1.0.0.jar
+      imagePullSecrets:
+      - name: sift-cred
+      volumes:
+      - configMap:
+          name: couchbase-pem
+        name: couchbase-pem-volume
+      - configMap:
+          name: core-start-script
+        name: startscript
+      - configMap:
+          items:
+          - key: Sydney
+            path: Sydney
+          name: sydney-cm
+        name: tz-config
+      - configMap:
+          name: stardust-jar
+        name: stardust-jar
